@@ -28,7 +28,7 @@ estimate n
   = do
     g <- newStdGen
     let points = take n $ randoms g
-        count = length $ filter ((< 1.0) . magnitude) $ points
+        count  = length $ filter ((< 1.0) . magnitude) $ points
     return $ 4 * (fromIntegral count) / (fromIntegral n)
 
 main :: IO ()

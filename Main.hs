@@ -1,3 +1,4 @@
+import Control.Monad ((>=>))
 import System.Random
 
 data Coord
@@ -22,14 +23,14 @@ magnitude :: Coord -> Double
 magnitude (Coord x y)
   = sqrt $ (x ^ 2) + (y ^ 2)
 
-estimate :: Int -> IO ()
+estimate :: Int -> IO Double
 estimate n
   = do
     g <- newStdGen
     let points = take n $ randoms g
         count = length $ filter ((< 1.0) . magnitude) $ points
-    putStrLn $ show $ 4 * (fromIntegral count) / (fromIntegral n)
+    return $ 4 * (fromIntegral count) / (fromIntegral n)
 
 main :: IO ()
 main
-  = mapM_ estimate [100,200..10000]
+  = mapM_ (estimate >=> print) [100,200..10000]

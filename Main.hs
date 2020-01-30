@@ -1,4 +1,5 @@
-import Control.Monad ((>=>))
+import Control.Monad               ((>=>))
+import Control.Parallel.Strategies
 import System.Random
 
 data Coord
@@ -23,14 +24,41 @@ magnitude :: Coord -> Double
 magnitude (Coord x y)
   = sqrt $ (x ^ 2) + (y ^ 2)
 
-estimate :: Int -> IO Double
-estimate n
-  = do
-    g <- newStdGen
-    let points = take n $ randoms g
-        count  = length $ filter ((< 1.0) . magnitude) $ points
-    return $ 4 * (fromIntegral count) / (fromIntegral n)
+sample :: Int -> Int -> (Int, Int)
+sample n seed
+  = (count, length points)
+    where
+      g      = mkStdGen seed
+      points = take n $ randoms g
+      count  = length $ filter ((< 1.0) . magnitude) $ points
+
+estimate :: Int -> Int -> Double
+estimate n seed
+  = 4 * (fromIntegral count) / (fromIntegral total)
+    where
+      (count, total)
+        = sample n seed
+
+join :: (Int, Int) -> (Int, Int) -> (Int, Int)
+join (inside1, total1) (inside2, total2)
+  = (inside1 + inside2, total1 + total2)
+
+parEstimate :: [Int] -> Int -> Double
+parEstimate ns seed
+  = 4 * (fromIntegral count) / (fromIntegral total)
+    where
+      g = mkStdGen seed
+      seeds = randoms g
+      (count, total)
+        = foldl1 join $ parMap rseq (uncurry sample) $ zip ns seeds
+
+  {-
+-- non-parallel
+main :: IO ()
+main
+  = putStrLn $ show $ estimate $ sample 1000000 0
+  -}
 
 main :: IO ()
 main
-  = mapM_ (estimate >=> print) [100,200..10000]
+  = print $ parEstimate (replicate 12 100000) 0

@@ -24,33 +24,28 @@ magnitude :: Coord -> Double
 magnitude (Coord x y)
   = sqrt $ (x ^ 2) + (y ^ 2)
 
-sample :: Int -> Int -> (Int, Int)
-sample n seed
-  = (count, length points)
-    where
-      g      = mkStdGen seed
-      points = take n $ randoms g
-      count  = length $ filter ((< 1.0) . magnitude) $ points
+sample :: Int -> [Coord]
+sample
+  = randoms . mkStdGen
 
 estimate :: Int -> Int -> Double
-estimate n seed
-  = 4 * (fromIntegral count) / (fromIntegral total)
-    where
-      (count, total)
-        = sample n seed
+estimate n
+  = estimate' . take n . sample
 
-join :: (Int, Int) -> (Int, Int) -> (Int, Int)
-join (inside1, total1) (inside2, total2)
-  = (inside1 + inside2, total1 + total2)
-
-parEstimate :: [Int] -> Int -> Double
-parEstimate ns seed
-  = 4 * (fromIntegral count) / (fromIntegral total)
+parEstimate :: Int -> Int -> Int -> Double
+parEstimate threads n seed
+  = estimate' points
     where
       g = mkStdGen seed
-      seeds = randoms g
-      (count, total)
-        = foldl1 join $ parMap rseq (uncurry sample) $ zip ns seeds
+      points
+        = concat $ parMap rseq (take n . sample) $ take threads $ randoms g
+
+estimate' :: [Coord] -> Double
+estimate' points
+  = 4 * (fromIntegral count) / (fromIntegral $ length points)
+    where
+      count
+        = length $ filter ((< 1) . magnitude) points
 
   {-
 -- non-parallel
@@ -61,4 +56,4 @@ main
 
 main :: IO ()
 main
-  = print $ parEstimate (replicate 12 100000) 0
+  = print $ parEstimate 12 1000000 0
